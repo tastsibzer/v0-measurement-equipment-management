@@ -105,7 +105,8 @@ import {
 // ============================================
 
 // User role types for role-based access control
-type UserRole = "Administrator" | "Właściciel" | "Wypożyczający" | "Obserwator"
+// Updated to only three roles: Admin, User (Użytkownik), Observer (Obserwator)
+type UserRole = "Admin" | "Użytkownik" | "Obserwator"
 
 // Authentication state machine
 type AuthStatus = "LoggedOut" | "LoggedIn" | "PendingApproval"
@@ -150,6 +151,57 @@ const ACCENT_COLORS: Record<AccentColor, { hex: string; name: string }> = {
   "orange": { hex: "#ea580c", name: "Pomarańczowy" },
 }
 
+// Helper function to convert hex color to HSL string for CSS variables
+function hexToHSL(hex: string): string {
+  // Remove # if present
+  hex = hex.replace(/^#/, "")
+  
+  // Parse hex values
+  const r = parseInt(hex.substring(0, 2), 16) / 255
+  const g = parseInt(hex.substring(2, 4), 16) / 255
+  const b = parseInt(hex.substring(4, 6), 16) / 255
+
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  let h = 0
+  let s = 0
+  const l = (max + min) / 2
+
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    
+    switch (max) {
+      case r:
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+        break
+      case g:
+        h = ((b - r) / d + 2) / 6
+        break
+      case b:
+        h = ((r - g) / d + 4) / 6
+        break
+    }
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`
+}
+
+// Helper function to adjust color brightness for hover states
+function adjustColorBrightness(hex: string, percent: number): string {
+  hex = hex.replace(/^#/, "")
+  
+  let r = parseInt(hex.substring(0, 2), 16)
+  let g = parseInt(hex.substring(2, 4), 16)
+  let b = parseInt(hex.substring(4, 6), 16)
+
+  r = Math.min(255, Math.max(0, r + (r * percent) / 100))
+  g = Math.min(255, Math.max(0, g + (g * percent) / 100))
+  b = Math.min(255, Math.max(0, b + (b * percent) / 100))
+
+  return `#${Math.round(r).toString(16).padStart(2, "0")}${Math.round(g).toString(16).padStart(2, "0")}${Math.round(b).toString(16).padStart(2, "0")}`
+}
+
 // Mock data for pending user registrations
 const mockPendingUsers = [
   { id: "1", name: "Maria Nowak", email: "maria.nowak@agh.edu.pl", date: "2024-01-15" },
@@ -157,12 +209,12 @@ const mockPendingUsers = [
   { id: "3", name: "Anna Wiśniewska", email: "anna.wisniewska@agh.edu.pl", date: "2024-01-13" },
 ]
 
-// Mock data for registered users
+// Mock data for registered users (trusted field removed as per requirements)
 const mockRegisteredUsers = [
-  { id: "u1", name: "Dr. Jan Kowalski", email: "jan.kowalski@agh.edu.pl", role: "Właściciel" as UserRole, trusted: true },
-  { id: "u2", name: "Prof. Maria Wiśniewska", email: "maria.wisniewska@agh.edu.pl", role: "Właściciel" as UserRole, trusted: true },
-  { id: "u3", name: "Tomasz Zieliński", email: "tomasz.zielinski@agh.edu.pl", role: "Wypożyczający" as UserRole, trusted: false },
-  { id: "u4", name: "Agnieszka Krawczyk", email: "agnieszka.krawczyk@agh.edu.pl", role: "Obserwator" as UserRole, trusted: false },
+  { id: "u1", name: "Dr. Jan Kowalski", email: "jan.kowalski@agh.edu.pl", role: "Admin" as UserRole },
+  { id: "u2", name: "Prof. Maria Wiśniewska", email: "maria.wisniewska@agh.edu.pl", role: "Użytkownik" as UserRole },
+  { id: "u3", name: "Tomasz Zieliński", email: "tomasz.zielinski@agh.edu.pl", role: "Użytkownik" as UserRole },
+  { id: "u4", name: "Agnieszka Krawczyk", email: "agnieszka.krawczyk@agh.edu.pl", role: "Obserwator" as UserRole },
 ]
 
 // Mock data for equipment inventory
@@ -237,13 +289,13 @@ const mockNotifications = [
   { id: "n3", message: "Wniosek o rejestrację: Maria Nowak", time: "1 dzień temu", read: true },
 ]
 
-// Navigation items with role-based visibility
+// Navigation items with role-based visibility (updated for new role system)
 const navItems: NavItem[] = [
-  { id: "dashboard", label: "Panel główny", icon: <LayoutDashboard className="h-5 w-5" />, description: "Statystyki", roles: ["Administrator", "Właściciel"] },
-  { id: "equipment", label: "Inwentarz sprzętu", icon: <Package className="h-5 w-5" />, description: "Lista urządzeń", roles: ["Administrator", "Właściciel", "Wypożyczający", "Obserwator"] },
-  { id: "borrowings", label: "Centrum wypożyczeń", icon: <ArrowLeftRight className="h-5 w-5" />, description: "Wnioski i zwroty", roles: ["Administrator", "Właściciel", "Wypożyczający"] },
-  { id: "locations", label: "Lokalizacje i Kategorie", icon: <MapPin className="h-5 w-5" />, description: "Drzewo lokalizacji", roles: ["Administrator", "Właściciel"] },
-  { id: "users", label: "Zarządzanie użytkownikami", icon: <Users className="h-5 w-5" />, description: "Role i rejestracje", roles: ["Administrator"] },
+  { id: "dashboard", label: "Panel główny", icon: <LayoutDashboard className="h-5 w-5" />, description: "Statystyki", roles: ["Admin", "Użytkownik"] },
+  { id: "equipment", label: "Inwentarz sprzętu", icon: <Package className="h-5 w-5" />, description: "Lista urządzeń", roles: ["Admin", "Użytkownik", "Obserwator"] },
+  { id: "borrowings", label: "Centrum wypożyczeń", icon: <ArrowLeftRight className="h-5 w-5" />, description: "Wnioski i zwroty", roles: ["Admin", "Użytkownik"] },
+  { id: "locations", label: "Lokalizacje i Kategorie", icon: <MapPin className="h-5 w-5" />, description: "Drzewo lokalizacji", roles: ["Admin", "Użytkownik"] },
+  { id: "users", label: "Zarządzanie użytkownikami", icon: <Users className="h-5 w-5" />, description: "Role i rejestracje", roles: ["Admin"] },
 ]
 
 // ============================================
@@ -252,7 +304,7 @@ const navItems: NavItem[] = [
 
 // Create context with default values
 const GlobalStateContext = createContext<GlobalStateContextType>({
-  currentUserRole: "Administrator",
+  currentUserRole: "Admin",
   setCurrentUserRole: () => {},
   theme: "dark",
   setTheme: () => {},
@@ -883,7 +935,7 @@ function DashboardContent() {
 function EquipmentContent({ userRole }: { userRole: UserRole }) {
   const [selectedEquipment, setSelectedEquipment] = useState<typeof mockEquipment[0] | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const canEdit = userRole === "Administrator" || userRole === "Właściciel"
+  const canEdit = userRole === "Admin"
   const isObserver = userRole === "Obserwator"
 
   return (
@@ -989,7 +1041,7 @@ function EquipmentContent({ userRole }: { userRole: UserRole }) {
 
 // Borrowing Center view with tabs
 function BorrowingContent({ userRole }: { userRole: UserRole }) {
-  const isOwnerOrAdmin = userRole === "Administrator" || userRole === "Właściciel"
+  const isOwnerOrAdmin = userRole === "Admin"
   
   return (
     <Tabs defaultValue="my-requests" className="space-y-4">
@@ -1129,7 +1181,14 @@ function BorrowingContent({ userRole }: { userRole: UserRole }) {
 }
 
 // Locations & Categories view with tree structures
+// Updated location hierarchy: Building -> Room -> optional sub-location text
+// Added external location option for addresses outside AGH
 function LocationsContent() {
+  const [isExternalLocation, setIsExternalLocation] = useState(false)
+  const [externalAddress, setExternalAddress] = useState("")
+  const [subLocationText, setSubLocationText] = useState("")
+  const [showAddLocationDialog, setShowAddLocationDialog] = useState(false)
+  
   const handleAddCategory = (parentId: string) => {
     // Mock action - in real app would open dialog
     console.log("Add category to:", parentId)
@@ -1138,6 +1197,7 @@ function LocationsContent() {
   const handleAddLocation = (parentId: string) => {
     // Mock action - in real app would open dialog
     console.log("Add location to:", parentId)
+    setShowAddLocationDialog(true)
   }
 
   return (
@@ -1171,7 +1231,7 @@ function LocationsContent() {
         </CardContent>
       </Card>
 
-      {/* Locations Tree */}
+      {/* Locations Tree - Updated hierarchy with external location support */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -1179,14 +1239,19 @@ function LocationsContent() {
               <MapPin className="h-5 w-5" />
               Lokalizacje
             </CardTitle>
-            <Button size="sm" className="bg-[#00693C] hover:bg-[#005530] text-white focus:ring-2 focus:ring-[#00693C]">
+            <Button 
+              size="sm" 
+              className="bg-[#00693C] hover:bg-[#005530] text-white focus:ring-2 focus:ring-[#00693C]"
+              onClick={() => setShowAddLocationDialog(true)}
+            >
               <Plus className="h-4 w-4 mr-1" />
-              Dodaj budynek
+              Dodaj lokalizację
             </Button>
           </div>
-          <CardDescription>Budynek → Sala → Szafa</CardDescription>
+          <CardDescription>Budynek → Sala → Dodatkowe miejsce (opcjonalne)</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Location tree */}
           <div className="border rounded-lg p-2">
             {mockLocations.map((loc) => (
               <TreeNode 
@@ -1197,6 +1262,97 @@ function LocationsContent() {
               />
             ))}
           </div>
+          
+          {/* External Location Form - shown when adding new location */}
+          {showAddLocationDialog && (
+            <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="external-location"
+                  checked={isExternalLocation}
+                  onCheckedChange={(checked) => setIsExternalLocation(checked as boolean)}
+                  className="focus:ring-2 focus:ring-[#00693C]"
+                />
+                <Label htmlFor="external-location" className="cursor-pointer">
+                  Lokalizacja zewnętrzna (poza AGH)
+                </Label>
+              </div>
+              
+              {isExternalLocation ? (
+                // External address input - shown when external location is selected
+                <div className="space-y-2">
+                  <Label htmlFor="external-address">Adres fizyczny</Label>
+                  <Input
+                    id="external-address"
+                    placeholder="np. ul. Przykładowa 123, 30-001 Kraków"
+                    value={externalAddress}
+                    onChange={(e) => setExternalAddress(e.target.value)}
+                    className="focus:ring-2 focus:ring-[#00693C]"
+                  />
+                </div>
+              ) : (
+                // AGH location fields - Building/Room with optional sub-location
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="building">Budynek</Label>
+                      <Select>
+                        <SelectTrigger className="focus:ring-2 focus:ring-[#00693C]">
+                          <SelectValue placeholder="Wybierz budynek" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A2">Budynek A2</SelectItem>
+                          <SelectItem value="B1">Budynek B1</SelectItem>
+                          <SelectItem value="C3">Budynek C3</SelectItem>
+                          <SelectItem value="D1">Budynek D1</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="room">Sala</Label>
+                      <Input
+                        id="room"
+                        placeholder="np. 204"
+                        className="focus:ring-2 focus:ring-[#00693C]"
+                      />
+                    </div>
+                  </div>
+                  {/* Optional sub-location - replaces strict Szafa requirement */}
+                  <div className="space-y-2">
+                    <Label htmlFor="sub-location">Dodatkowe miejsce (opcjonalne)</Label>
+                    <Input
+                      id="sub-location"
+                      placeholder="np. Szafa A1, Biurko 3, Półka górna"
+                      value={subLocationText}
+                      onChange={(e) => setSubLocationText(e.target.value)}
+                      className="focus:ring-2 focus:ring-[#00693C]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Możesz wpisać dowolne oznaczenie miejsca: szafa, biurko, półka itp.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowAddLocationDialog(false)}
+                  className="focus:ring-2 focus:ring-[#00693C]"
+                >
+                  Anuluj
+                </Button>
+                <Button 
+                  size="sm"
+                  className="bg-[#00693C] hover:bg-[#005530] text-white focus:ring-2 focus:ring-[#00693C]"
+                  onClick={() => setShowAddLocationDialog(false)}
+                >
+                  Zapisz lokalizację
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -1244,9 +1400,8 @@ function UsersContent() {
                         <SelectValue placeholder="Wybierz rolę" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Administrator">Administrator</SelectItem>
-                        <SelectItem value="Właściciel">Właściciel</SelectItem>
-                        <SelectItem value="Wypożyczający">Wypożyczający</SelectItem>
+                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="Użytkownik">Użytkownik</SelectItem>
                         <SelectItem value="Obserwator">Obserwator</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1274,14 +1429,14 @@ function UsersContent() {
         </CardContent>
       </Card>
 
-      {/* Registered Users */}
+      {/* Registered Users - Zaufany column removed as per requirements */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Zarejestrowani użytkownicy
           </CardTitle>
-          <CardDescription>Zarządzaj rolami i statusem zaufania użytkowników</CardDescription>
+          <CardDescription>Zarządzaj rolami użytkowników</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -1290,7 +1445,6 @@ function UsersContent() {
                 <TableHead>Imię i Nazwisko</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Rola</TableHead>
-                <TableHead>Zaufany</TableHead>
                 <TableHead className="text-right">Akcje</TableHead>
               </TableRow>
             </TableHeader>
@@ -1301,18 +1455,6 @@ function UsersContent() {
                   <TableCell className="text-muted-foreground">{user.email}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{user.role}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Checkbox 
-                        id={`trusted-${user.id}`}
-                        defaultChecked={user.trusted}
-                        className="focus:ring-2 focus:ring-[#00693C]"
-                      />
-                      <Label htmlFor={`trusted-${user.id}`} className="text-sm cursor-pointer">
-                        {user.trusted && <Star className="h-4 w-4 text-yellow-500 inline ml-1" />}
-                      </Label>
-                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -1595,15 +1737,14 @@ function MainDashboard({ onLogout }: { onLogout: () => void }) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Role Switcher (for testing) */}
+          {/* Role Switcher (for testing UI states) */}
           <Select value={currentUserRole} onValueChange={(v) => setCurrentUserRole(v as UserRole)}>
             <SelectTrigger className="w-40 hidden lg:flex focus:ring-2 focus:ring-[#00693C]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Administrator">Administrator</SelectItem>
-              <SelectItem value="Właściciel">Właściciel</SelectItem>
-              <SelectItem value="Wypożyczający">Wypożyczający</SelectItem>
+              <SelectItem value="Admin">Admin</SelectItem>
+              <SelectItem value="Użytkownik">Użytkownik</SelectItem>
               <SelectItem value="Obserwator">Obserwator</SelectItem>
             </SelectContent>
           </Select>
@@ -1684,7 +1825,7 @@ function MainDashboard({ onLogout }: { onLogout: () => void }) {
 
 export function AdminView() {
   // Global state management
-  const [currentUserRole, setCurrentUserRole] = useState<UserRole>("Administrator")
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole>("Admin")
   const [theme, setTheme] = useState<ThemeMode>("dark")
   const [font, setFont] = useState<FontFamily>("sans")
   const [accentColor, setAccentColor] = useState<AccentColor>("agh-green")
@@ -1699,6 +1840,32 @@ export function AdminView() {
       document.documentElement.classList.remove("dark")
     }
   }, [theme])
+
+  // Apply dynamic accent color CSS variables to :root element
+  // This fixes the color switching functionality in Settings
+  useEffect(() => {
+    const root = document.documentElement
+    const colorHex = ACCENT_COLORS[accentColor].hex
+    
+    // Set CSS custom properties for dynamic theming
+    root.style.setProperty("--accent-color", colorHex)
+    root.style.setProperty("--accent-color-hover", adjustColorBrightness(colorHex, -15))
+    root.style.setProperty("--accent-color-light", colorHex + "20") // 20% opacity for backgrounds
+    
+    // Convert to oklch for shadcn/Tailwind compatibility
+    // Using pre-calculated oklch values for each accent color
+    const oklchValues: Record<AccentColor, string> = {
+      "agh-green": "oklch(0.45 0.15 160)",
+      "blue": "oklch(0.55 0.22 260)",
+      "purple": "oklch(0.5 0.25 290)",
+      "orange": "oklch(0.6 0.2 45)",
+    }
+    
+    root.style.setProperty("--primary", oklchValues[accentColor])
+    root.style.setProperty("--ring", oklchValues[accentColor])
+    root.style.setProperty("--sidebar-primary", oklchValues[accentColor])
+    root.style.setProperty("--sidebar-ring", oklchValues[accentColor])
+  }, [accentColor])
 
   // Auth handlers
   const handleGoogleLogin = () => {
