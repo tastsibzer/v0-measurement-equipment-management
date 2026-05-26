@@ -13,7 +13,7 @@ import { AdminView } from "@/components/views/admin-view"
 export type ViewType = "login" | "dashboard" | "details" | "form" | "borrowings" | "statistics" | "admin"
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<ViewType>("dashboard")
+  const [currentView, setCurrentView] = useState<ViewType>("admin")
   const [isLoggedIn, setIsLoggedIn] = useState(true)
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
   const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null)
@@ -83,6 +83,11 @@ export default function Home() {
       default:
         return <DashboardView onViewDetails={handleViewDetails} onAddDevice={handleAddDevice} />
     }
+  }
+
+  // Admin view has its own full-screen layout with custom header
+  if (currentView === "admin") {
+    return <AdminView />
   }
 
   return (
