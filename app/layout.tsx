@@ -7,8 +7,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Aparatura AGH - System Zarządzania',
-  description: 'Zintegrowany system zarządzania aparaturą pomiarową AGH',
+  title: 'Equipment Manager - Admin Panel',
+  description: 'Integrated equipment management system for laboratory and measurement devices',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pl">
+    <html lang="en" className="bg-background">
       <body className="font-sans antialiased bg-background">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
