@@ -8,12 +8,18 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Upload, Plus } from "lucide-react"
+import { Upload, Plus, Trash2 } from "lucide-react"
 
 interface FormViewProps {
   deviceId: string | null
   onCancel: () => void
   onSave: () => void
+}
+
+interface TechnicalParameter {
+  id: number
+  name: string
+  value: string
 }
 
 const categories = [
@@ -76,8 +82,35 @@ export function FormView({ deviceId, onCancel, onSave }: FormViewProps) {
       : "",
   })
 
+  const [technicalParameters, setTechnicalParameters] = useState<TechnicalParameter[]>(
+    isEditing
+      ? [
+          { id: 1, name: "Producent", value: "Zeiss" },
+          { id: 2, name: "Model", value: "Axio Imager.A2" },
+          { id: 3, name: "Powiększenie", value: "40x - 1000x" },
+        ]
+      : [{ id: 1, name: "", value: "" }]
+  )
+
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const addParameter = () => {
+    setTechnicalParameters((prev) => [
+      ...prev,
+      { id: Date.now(), name: "", value: "" },
+    ])
+  }
+
+  const removeParameter = (id: number) => {
+    setTechnicalParameters((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  const updateParameter = (id: number, field: "name" | "value", newValue: string) => {
+    setTechnicalParameters((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: newValue } : p))
+    )
   }
 
   return (
@@ -227,6 +260,52 @@ export function FormView({ deviceId, onCancel, onSave }: FormViewProps) {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+          </div>
+
+          {/* Technical Parameters */}
+          <div className="space-y-2">
+            <Label>Parametry techniczne</Label>
+            <Card className="p-4">
+              <div className="space-y-3">
+                {technicalParameters.map((param) => (
+                  <div key={param.id} className="flex items-center gap-3">
+                    <Input
+                      placeholder="Nazwa parametru"
+                      value={param.name}
+                      onChange={(e) => updateParameter(param.id, "name", e.target.value)}
+                      className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500"
+                    />
+                    <Input
+                      placeholder="Wartość"
+                      value={param.value}
+                      onChange={(e) => updateParameter(param.id, "value", e.target.value)}
+                      className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500"
+                    />
+                    {technicalParameters.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeParameter(param.id)}
+                        className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-blue-500"
+                        aria-label="Usuń parametr"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addParameter}
+                  className="w-full focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Dodaj parametr
+                </Button>
+              </div>
+            </Card>
           </div>
 
           {/* Technical Description */}

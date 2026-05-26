@@ -8,12 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { FileSpreadsheet, FileText, Plus, Search } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { FileSpreadsheet, FileText, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 
 interface DashboardViewProps {
   onViewDetails: (deviceId: string) => void
   onAddDevice: () => void
+}
+
+interface ParameterFilter {
+  id: number
+  key: string
+  value: string
 }
 
 const mockDevices = [
@@ -79,6 +86,32 @@ export function DashboardView({ onViewDetails, onAddDevice }: DashboardViewProps
   const [location, setLocation] = useState("all")
   const [sortBy, setSortBy] = useState("az")
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
+  const [parameterFilters, setParameterFilters] = useState<ParameterFilter[]>([
+    { id: 1, key: "", value: "" }
+  ])
+
+  const addParameterFilter = () => {
+    setParameterFilters(prev => [
+      ...prev,
+      { id: Date.now(), key: "", value: "" }
+    ])
+  }
+
+  const removeParameterFilter = (id: number) => {
+    setParameterFilters(prev => prev.filter(f => f.id !== id))
+  }
+
+  const updateParameterFilter = (id: number, field: "key" | "value", newValue: string) => {
+    setParameterFilters(prev =>
+      prev.map(f => (f.id === id ? { ...f, [field]: newValue } : f))
+    )
+  }
+
+  const clearAdvancedFilters = () => {
+    setParameterFilters([{ id: 1, key: "", value: "" }])
+  }
+
+  const activeAdvancedFiltersCount = parameterFilters.filter(f => f.key && f.value).length
 
   const filteredDevices = mockDevices.filter((device) => {
     if (showOverdueOnly && device.status !== "overdue") return false
@@ -101,7 +134,7 @@ export function DashboardView({ onViewDetails, onAddDevice }: DashboardViewProps
       case "borrowed":
         return <Badge variant="secondary">Wypożyczony</Badge>
       case "overdue":
-        return <Badge variant="destructive">Wypożyczony (Spóźniony!)</Badge>
+        return <Badge variant="destructive">Spóźniony</Badge>
       default:
         return null
     }
@@ -139,12 +172,12 @@ export function DashboardView({ onViewDetails, onAddDevice }: DashboardViewProps
       {/* Filter Bar */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
             {/* Search */}
             <div className="lg:col-span-2 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Szukaj po nazwie, parametrach, osobie... (<100ms)"
+                placeholder="Szukaj urządzenia..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -191,6 +224,80 @@ export function DashboardView({ onViewDetails, onAddDevice }: DashboardViewProps
                 <SelectItem value="longest">Najdłużej przetrzymywane</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Advanced Filters Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  Filtry zaawansowane
+                  {activeAdvancedFiltersCount > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {activeAdvancedFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-96" align="end">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Filtry parametrów technicznych</h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAdvancedFilters}
+                      className="text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      Wyczyść
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Wyszukaj urządzenia po konkretnych parametrach technicznych.
+                  </p>
+                  <div className="space-y-3">
+                    {parameterFilters.map((filter, index) => (
+                      <div key={filter.id} className="flex items-center gap-2">
+                        <Input
+                          placeholder="Parametr"
+                          value={filter.key}
+                          onChange={(e) => updateParameterFilter(filter.id, "key", e.target.value)}
+                          className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500"
+                        />
+                        <Input
+                          placeholder="Wartość"
+                          value={filter.value}
+                          onChange={(e) => updateParameterFilter(filter.id, "value", e.target.value)}
+                          className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500"
+                        />
+                        {parameterFilters.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeParameterFilter(filter.id)}
+                            className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-blue-500"
+                            aria-label="Usuń filtr"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addParameterFilter}
+                    className="w-full focus-visible:ring-2 focus-visible:ring-blue-500"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Dodaj filtr
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Overdue Checkbox */}
